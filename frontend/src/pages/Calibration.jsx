@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
+import { CheckCircle2, RotateCcw, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useEyeMouse } from '../context/EyeMouseContext';
 
 const Calibration = () => {
@@ -68,7 +68,6 @@ const Calibration = () => {
   // Reset & start whenever isCalibrationOpen becomes true
   useEffect(() => {
     if (isCalibrationOpen) {
-      enterFullscreen();
       setCalibrationState('webcam_preview');
       setPreviewCountdown(3);
       setCurrentPoint(1);
@@ -124,22 +123,7 @@ const Calibration = () => {
     return () => clearInterval(interval);
   }, [isCalibrationOpen, calibrationState, startCalibration]);
 
-  // Listen for browser fullscreen exit (e.g. user pressing ESC in browser)
-  useEffect(() => {
-    if (!isCalibrationOpen) return;
 
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        handleCancel();
-      }
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-    };
-  }, [isCalibrationOpen]);
 
   // Dedicated Escape key handler while calibration overlay is open
   useEffect(() => {
@@ -167,8 +151,8 @@ const Calibration = () => {
     if (isCalibrationOpen && calibrationState === 'calibrating') {
       const ptIndex = currentPoint - 1;
       const ptConfig = gridPositions[ptIndex];
-      const screenW = window.screen.width || window.innerWidth || 1920;
-      const screenH = window.screen.height || window.innerHeight || 1080;
+      const screenW = telemetry?.screenWidth || (window.screen.width * (window.devicePixelRatio || 1)) || 1920;
+      const screenH = telemetry?.screenHeight || (window.screen.height * (window.devicePixelRatio || 1)) || 1080;
       const targetX = Math.round(ptConfig.xRatio * screenW);
       const targetY = Math.round(ptConfig.yRatio * screenH);
 
@@ -189,7 +173,11 @@ const Calibration = () => {
             const res = await finishCalibration();
             exitFullscreen();
             setCalibResult(res);
-            setCalibrationState('complete');
+            if (res && res.success === false) {
+              setCalibrationState('failed');
+            } else {
+              setCalibrationState('complete');
+            }
           }
         }, 1000); // 1.0s sample
       }, 600); // 0.6s settle
@@ -678,6 +666,101 @@ const Calibration = () => {
                 }}
               >
                 Done (ESC) <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {calibrationState === 'failed' && (
+        <div 
+          id="fullscreen-calibration-failed-overlay"
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            width: '100vw', 
+            height: '100vh', 
+            backgroundColor: 'rgba(5, 7, 15, 0.94)', 
+            zIndex: 99999999,
+            overflow: 'hidden',
+            margin: 0,
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            userSelect: 'none',
+            backdropFilter: 'blur(16px)'
+          }}
+        >
+          <div style={{ 
+            maxWidth: '560px', 
+            width: '90%', 
+            textAlign: 'center', 
+            background: 'rgba(15, 23, 42, 0.95)', 
+            border: '1px solid rgba(239, 68, 68, 0.35)', 
+            borderRadius: '24px', 
+            padding: '2.5rem 2rem', 
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)' 
+          }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '2px solid #ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 0 30px rgba(239, 68, 68, 0.4)'
+            }}>
+              <AlertTriangle size={46} style={{ color: '#ef4444' }} />
+            </div>
+
+            <h2 style={{ color: '#ffffff', fontSize: '1.75rem', fontWeight: 800, margin: '0 0 0.5rem', letterSpacing: '0.02em' }}>
+              CALIBRATION INCOMPLETE
+            </h2>
+            <p style={{ color: '#fca5a5', fontSize: '0.95rem', margin: '0 0 1.5rem', lineHeight: 1.5 }}>
+              {calibResult?.error || 'Head movements were not recorded or face was not visible to the camera.'}
+            </p>
+
+            <div style={{ background: 'rgba(30, 41, 59, 0.7)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '2rem', textAlign: 'left', color: '#cbd5e1', fontSize: '0.85rem', lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 600, color: '#f8fafc', marginBottom: '0.25rem' }}>Tips for successful calibration:</div>
+              • Center your head inside the biometric oval during the 3-second camera check.<br />
+              • Turn your head slightly to face each red/green dot directly.<br />
+              • Ensure your room has good frontal lighting and your webcam lens is clean.
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center' }}>
+              <button 
+                className="secondary-button" 
+                onClick={handleCancel} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  padding: '0.75rem 1.5rem', 
+                  borderRadius: '12px', 
+                  color: '#ffffff',
+                  borderColor: 'rgba(255,255,255,0.2)' 
+                }}
+              >
+                Close
+              </button>
+              <button 
+                className="rgb-button" 
+                onClick={handleRecalibrate} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  padding: '0.75rem 2.25rem', 
+                  borderRadius: '12px',
+                  fontWeight: 700
+                }}
+              >
+                <RotateCcw size={16} /> Try Again
               </button>
             </div>
           </div>

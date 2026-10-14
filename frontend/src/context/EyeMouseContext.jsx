@@ -212,13 +212,13 @@ export const EyeMouseProvider = ({ children }) => {
         setCalibrationResult(data);
         return data;
       }
-      const fallback = { success: true, quality: 'Good', meanError: 14.2 };
-      setCalibrationResult(fallback);
-      return fallback;
+      const errFallback = { success: false, error: `Backend returned error (HTTP ${res.status})` };
+      setCalibrationResult(errFallback);
+      return errFallback;
     } catch (e) {
-      const fallback = { success: true, quality: 'Good', meanError: 14.2 };
-      setCalibrationResult(fallback);
-      return fallback;
+      const errFallback = { success: false, error: 'Cannot connect to backend to save calibration.' };
+      setCalibrationResult(errFallback);
+      return errFallback;
     }
   }, [sendCommand]);
 
@@ -276,22 +276,22 @@ export const EyeMouseProvider = ({ children }) => {
   // Global hotkeys (ESC to Stop, P to Pause, C to Calibrate)
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Don't trigger if user is actively typing in an input or textarea
+      const activeEl = document.activeElement;
+      const isInputActive = activeEl && (['INPUT', 'TEXTAREA'].includes(activeEl.tagName) || activeEl.isContentEditable);
+      if (isInputActive) return;
+
       if (e.key === 'Escape') {
         // If calibration overlay is active, let calibration overlay handle ESC
         if (isCalibrationOpen || document.fullscreenElement || document.webkitFullscreenElement) {
           return;
         }
         stopControl();
-      } else if (e.key === 'p' || e.key === 'P') {
-        // Only toggle if not in an active input and not calibrating
-        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      } else if (e.key === 'p' || e.key === 'P' || e.code === 'KeyP') {
         if (isCalibrationOpen) return;
         pauseControl();
-      } else if (e.key === 'c' || e.key === 'C') {
-        // Only trigger if not in an active input
-        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      } else if (e.key === 'c' || e.key === 'C' || e.code === 'KeyC') {
         if (isCalibrationOpen) return;
-
         startCalibrationFlow();
       }
     };

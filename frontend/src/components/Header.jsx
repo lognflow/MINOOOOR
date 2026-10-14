@@ -1,10 +1,10 @@
 import React from 'react';
-import { Settings, Square, Play, Pause } from 'lucide-react';
+import { Settings, Square, Play, Pause, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEyeMouse } from '../context/EyeMouseContext';
 
 const Header = () => {
-  const { isConnected, telemetry, startControl, pauseControl, stopControl, toggleMode } = useEyeMouse();
+  const { isConnected, telemetry, startControl, pauseControl, stopControl, toggleMode, startCalibrationFlow } = useEyeMouse();
 
   return (
     <div className="header">
@@ -58,6 +58,23 @@ const Header = () => {
             <Square size={14} /> STOP
           </button>
         )}
+
+        <button 
+          onClick={startCalibrationFlow} 
+          className="secondary-button" 
+          style={{ 
+            padding: '0.35rem 0.85rem', 
+            fontSize: '0.75rem', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.35rem',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }} 
+          title="Start 9-Point Calibration (or press C on keyboard)"
+        >
+          <Target size={14} color="#38bdf8" /> Calibrate (C)
+        </button>
 
         <Link to="/settings" className="header-action">
           <Settings size={20} />

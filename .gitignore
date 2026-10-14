@@ -1,0 +1,16 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Node modules & build
+frontend/node_modules/
+frontend/dist/
+
+# Machine-specific calibration data (calibrated locally per device)
+eye-controlled-mouse/calibration_head.npy
+*.npy

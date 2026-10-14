@@ -147,24 +147,43 @@ class ThreadedCamera:
         time.sleep(0.3)  # warm up
 
     def _open_camera(self, resolutions):
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            raise RuntimeError("Could not open webcam (index 0). Check camera permissions/connection.")
+        import sys
+        backends = [cv2.CAP_DSHOW, cv2.CAP_ANY] if sys.platform == "win32" else [cv2.CAP_ANY]
+        for backend in backends:
+            for idx in [0, 1, 2]:
+                try:
+                    cap = cv2.VideoCapture(idx, backend) if backend != cv2.CAP_ANY else cv2.VideoCapture(idx)
+                    if not cap.isOpened():
+                        cap.release()
+                        continue
 
-        for w, h in resolutions:
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            ok, frame = cap.read()
-            if ok and frame is not None:
-                actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                print(f"Camera opened at {actual_w}x{actual_h}")
-                self.cap = cap
-                self.width, self.height = actual_w, actual_h
-                return
+                    ok, test_frame = cap.read()
+                    if not ok or test_frame is None or getattr(test_frame, "size", 0) == 0:
+                        cap.release()
+                        continue
 
-        raise RuntimeError("Could not open webcam at any supported resolution.")
+                    for w, h in resolutions:
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+                        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        ok2, frame2 = cap.read()
+                        if ok2 and frame2 is not None and getattr(frame2, "size", 0) > 0:
+                            actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or w
+                            actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or h
+                            print(f"[Camera] Opened device {idx} at {actual_w}x{actual_h}")
+                            self.cap = cap
+                            self.width, self.height = actual_w, actual_h
+                            return
+
+                    self.cap = cap
+                    self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
+                    self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
+                    print(f"[Camera] Opened device {idx} with default resolution {self.width}x{self.height}")
+                    return
+                except Exception as e:
+                    print(f"[Camera] Device {idx} check error: {e}")
+
+        raise RuntimeError("Could not find or open any working webcam (tried indices 0, 1, 2). Check Windows Privacy settings.")
 
     def _update(self):
         while not self.stopped:

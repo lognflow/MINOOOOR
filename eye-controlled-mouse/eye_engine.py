@@ -137,31 +137,46 @@ class ThreadedCamera:
         time.sleep(0.3)
 
     def _open_camera(self):
-        try:
-            cap = cv2.VideoCapture(0)
-            if not cap.isOpened():
-                print("[Camera] Warning: Could not open webcam index 0.")
-                self.ok = False
-                return
+        backends = [cv2.CAP_DSHOW, cv2.CAP_ANY] if sys.platform == "win32" else [cv2.CAP_ANY]
+        for backend in backends:
+            for idx in [0, 1, 2]:
+                try:
+                    cap = cv2.VideoCapture(idx, backend) if backend != cv2.CAP_ANY else cv2.VideoCapture(idx)
+                    if not cap.isOpened():
+                        cap.release()
+                        continue
 
-            for w, h in self.resolutions:
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                ok, frame = cap.read()
-                if ok and frame is not None:
-                    self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    # Verify camera actually reads a valid frame
+                    ok, test_frame = cap.read()
+                    if not ok or test_frame is None or getattr(test_frame, "size", 0) == 0:
+                        cap.release()
+                        continue
+
+                    # Found a working camera! Configure best resolution
+                    for w, h in self.resolutions:
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+                        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        ok2, frame2 = cap.read()
+                        if ok2 and frame2 is not None and getattr(frame2, "size", 0) > 0:
+                            self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or w
+                            self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or h
+                            self.cap = cap
+                            self.ok = True
+                            print(f"[Camera] Opened device {idx} at {self.width}x{self.height} (backend={backend})")
+                            return
+
+                    self.width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
+                    self.height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
                     self.cap = cap
                     self.ok = True
-                    print(f"[Camera] Opened at {self.width}x{self.height}")
+                    print(f"[Camera] Opened device {idx} with fallback resolution {self.width}x{self.height}")
                     return
+                except Exception as e:
+                    print(f"[Camera] Scan error on index {idx}: {e}")
 
-            self.cap = cap
-            self.ok = True
-        except Exception as e:
-            print(f"[Camera] Error: {e}")
-            self.ok = False
+        print("[Camera] Warning: Could not find or open any working webcam (tried indices 0, 1, 2).")
+        self.ok = False
 
     def _update(self):
         while not self.stopped:
@@ -446,6 +461,8 @@ class EyeEngine:
             "scrollAmount": 0,
             "clickCount": 0,
             "cameraResolution": f"{self.camera.width}x{self.camera.height}",
+            "screenWidth": self.screen_w,
+            "screenHeight": self.screen_h,
             "settings": dict(self.settings)
         }
 
@@ -590,17 +607,25 @@ class EyeEngine:
             self.calibration_active = False
             self.is_sampling_calibration = False
             if len(self.calibration_points_head) < 4:
-                return {"success": False, "error": "Not enough calibration points recorded."}
+                return {"success": False, "error": "Not enough calibration points recorded. Please ensure your face is clearly visible to the camera."}
 
             src = np.array(self.calibration_points_head, dtype=np.float32)
             dst = np.array(self.calibration_points_screen, dtype=np.float32)
+
+            # Check if head points actually moved (prevent all default [0.5, 0.5] if face wasn't detected)
+            head_spread = np.ptp(src, axis=0)
+            if head_spread[0] < 0.005 and head_spread[1] < 0.005:
+                return {
+                    "success": False,
+                    "error": "Face movements were not detected during calibration. Please position your face in the camera frame with good lighting."
+                }
 
             homography, _ = cv2.findHomography(src, dst, method=0)
             if homography is None:
                 homography, _ = cv2.findHomography(src, dst, method=cv2.RANSAC, ransacReprojThreshold=20.0)
 
             if homography is None:
-                return {"success": False, "error": "Could not compute calibration matrix."}
+                return {"success": False, "error": "Could not compute calibration matrix. Please try again with steady head positioning."}
 
             reproj = cv2.perspectiveTransform(src.reshape(-1, 1, 2), homography).reshape(-1, 2)
             errors = np.linalg.norm(reproj - dst, axis=1)

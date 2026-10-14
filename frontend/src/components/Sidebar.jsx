@@ -13,7 +13,7 @@ import {
 import { useEyeMouse } from '../context/EyeMouseContext';
 
 const Sidebar = () => {
-  const { isConnected, telemetry } = useEyeMouse();
+  const { isConnected, telemetry, startCalibrationFlow } = useEyeMouse();
 
   return (
     <div className="sidebar">
@@ -37,6 +37,17 @@ const Sidebar = () => {
           <MousePointer2 size={20} />
           <span>Mouse Control</span>
         </NavLink>
+
+        <button 
+          type="button"
+          onClick={startCalibrationFlow} 
+          className="nav-item"
+          style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+          title="Start 9-Point Calibration (or press C on keyboard)"
+        >
+          <Target size={20} />
+          <span>Calibration (C)</span>
+        </button>
 
         <NavLink to="/camera" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <Camera size={20} />
