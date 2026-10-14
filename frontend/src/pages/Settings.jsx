@@ -5,7 +5,7 @@ import { useEyeMouse } from '../context/EyeMouseContext';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { settings, updateSettings, telemetry } = useEyeMouse();
+  const { settings, updateSettings, telemetry, startCalibrationFlow } = useEyeMouse();
   const [localSettings, setLocalSettings] = useState({ ...settings });
   const [savedFeedback, setSavedFeedback] = useState(false);
 
@@ -85,10 +85,11 @@ const Settings = () => {
           </div>
           <button 
             className="secondary-button"
-            onClick={() => navigate('/calibration')}
+            onClick={startCalibrationFlow}
+            title="Press C on keyboard anytime to start calibration"
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderColor: '#3b82f6', color: '#2563eb' }}
           >
-            <Target size={16} /> Calibration Status: {telemetry.calibQuality || 'Good'}
+            <Target size={16} /> Calibrate (Press C)
           </button>
         </div>
       </div>

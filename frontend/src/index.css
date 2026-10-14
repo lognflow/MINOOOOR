@@ -222,3 +222,27 @@ h4 { font-size: 1.25rem; }
   outline: 2px solid var(--success-color);
   outline-offset: 2px;
 }
+
+/* Calibration & Biometric HUD Animations */
+@keyframes scalePulse {
+  0% {
+    transform: scale(0.92);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+  }
+  100% {
+    transform: scale(1.08);
+    box-shadow: 0 0 45px rgba(56, 189, 248, 0.85);
+  }
+}
+
+@keyframes biometricPulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+}
+

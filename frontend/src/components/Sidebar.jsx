@@ -38,11 +38,6 @@ const Sidebar = () => {
           <span>Mouse Control</span>
         </NavLink>
 
-        <NavLink to="/calibration" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
-          <Target size={20} />
-          <span>Calibration</span>
-        </NavLink>
-
         <NavLink to="/camera" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <Camera size={20} />
           <span>Camera</span>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { EyeMouseProvider } from './context/EyeMouseContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -15,8 +15,9 @@ import './App.css';
 
 function App() {
   return (
-    <EyeMouseProvider>
-      <Router>
+    <Router>
+      <EyeMouseProvider>
+        <Calibration />
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/*" element={
@@ -28,19 +29,19 @@ function App() {
                   <Routes>
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/mouse-control" element={<MouseControl />} />
-                    <Route path="/calibration" element={<Calibration />} />
                     <Route path="/camera" element={<CameraPage />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/monitoring" element={<Monitoring />} />
                     <Route path="/help" element={<Help />} />
+                    <Route path="/calibration" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </div>
               </div>
             </div>
           } />
         </Routes>
-      </Router>
-    </EyeMouseProvider>
+      </EyeMouseProvider>
+    </Router>
   );
 }
 

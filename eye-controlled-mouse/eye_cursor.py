@@ -290,6 +290,46 @@ def run_calibration():
     cv2.namedWindow("Calibration", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("Calibration", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
+    # 3-Second Fullscreen Webcam View before calibration dots begin
+    preview_start = time.time()
+    while time.time() - preview_start < 3.0:
+        success, frame = camera.read()
+        if not success:
+            time.sleep(0.01)
+            continue
+
+        frame = cv2.flip(frame, 1)
+        full_frame = cv2.resize(frame, (SCREEN_W, SCREEN_H))
+
+        elapsed = time.time() - preview_start
+        remaining = max(1, int(math.ceil(3.0 - elapsed)))
+
+        # Center face guidance reticle
+        cx, cy = SCREEN_W // 2, SCREEN_H // 2
+        cv2.ellipse(full_frame, (cx, cy), (int(SCREEN_W * 0.16), int(SCREEN_H * 0.28)), 0, 0, 360, (0, 255, 200), 2, cv2.LINE_AA)
+        cv2.drawMarker(full_frame, (cx, cy), (0, 255, 200), cv2.MARKER_CROSS, 30, 2)
+
+        # Top banner overlay
+        overlay = full_frame.copy()
+        cv2.rectangle(overlay, (0, 0), (SCREEN_W, 100), (15, 23, 42), -1)
+        cv2.addWeighted(overlay, 0.75, full_frame, 0.25, 0, full_frame)
+
+        cv2.putText(full_frame, "WEBCAM PREVIEW - CENTER YOUR FACE & HEAD", (50, 45),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(full_frame, f"CALIBRATION STARTING IN {remaining}s (ESC to Cancel)", (50, 80),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2, cv2.LINE_AA)
+
+        # Large countdown circle badge
+        cv2.circle(full_frame, (cx, cy + int(SCREEN_H * 0.35)), 46, (0, 255, 255), -1)
+        cv2.putText(full_frame, str(remaining), (cx - 14, cy + int(SCREEN_H * 0.35) + 16),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.6, (15, 23, 42), 3, cv2.LINE_AA)
+
+        cv2.imshow("Calibration", full_frame)
+        key = cv2.waitKey(1) & 0xFF
+        if key == 27:
+            cv2.destroyWindow("Calibration")
+            return None, None
+
     margin = 0.08
     xs = [margin, 0.5, 1 - margin]
     ys = [margin, 0.5, 1 - margin]
@@ -541,7 +581,7 @@ win_x = max(SCREEN_W - DEBUG_WINDOW_W - 30, 0)
 win_y = 30
 cv2.moveWindow("Head Cursor - Project", win_x, win_y)
 
-print("Head cursor running. Press ESC to quit, R to recalibrate, P to pause.")
+print("Head cursor running. Press ESC to quit, C or R to calibrate, P to pause.")
 run_countdown(COUNTDOWN_SECONDS)
 
 while True:
@@ -699,7 +739,7 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     if key == 27:
         break
-    elif key == ord("r"):
+    elif key in (ord("r"), ord("R"), ord("c"), ord("C")):
         new_h, new_quality = run_calibration()
         if new_h is not None:
             homography = new_h

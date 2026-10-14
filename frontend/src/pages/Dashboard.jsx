@@ -13,7 +13,8 @@ const Dashboard = () => {
     pauseControl, 
     resumeControl, 
     stopControl, 
-    toggleMode 
+    toggleMode,
+    startCalibrationFlow
   } = useEyeMouse();
 
   return (
@@ -26,10 +27,11 @@ const Dashboard = () => {
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button 
             className="secondary-button" 
-            onClick={() => navigate('/calibration')} 
+            onClick={startCalibrationFlow} 
+            title="Press C on keyboard anytime to start calibration"
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}
           >
-            <Target size={18} /> Calibrate ({telemetry.calibQuality || 'Good'})
+            <Target size={18} /> Calibrate (Press C)
           </button>
           <button 
             className="secondary-button" 

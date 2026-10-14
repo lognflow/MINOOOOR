@@ -63,13 +63,14 @@ const Help = () => {
             
             <div className="flex-col gap-3">
               {[
+                { key: 'C', action: 'Start 9-Point Calibration (with 3s fullscreen webcam preview)' },
                 { key: 'ESC', action: 'Emergency Stop / Halt Mouse Control immediately' },
                 { key: 'P', action: 'Pause / Resume Mouse Control' },
                 { key: 'R', action: 'Quick Recalibrate Head Position' },
                 { key: 'Mouth Open', action: 'Gesture shortcut: Toggle MOVE ↔ SCROLL' },
                 { key: '0.4s Blink', action: 'Gesture shortcut: Left Mouse Click' },
               ].map((item, index) => (
-                <div key={index} className="flex justify-between items-center" style={{ padding: '0.6rem 0', borderBottom: index < 4 ? '1px solid var(--border-color)' : 'none' }}>
+                <div key={index} className="flex justify-between items-center" style={{ padding: '0.6rem 0', borderBottom: index < 5 ? '1px solid var(--border-color)' : 'none' }}>
                   <span style={{ background: '#0f172a', color: '#f8fafc', padding: '0.25rem 0.6rem', borderRadius: '4px', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.85rem' }}>
                     {item.key}
                   </span>

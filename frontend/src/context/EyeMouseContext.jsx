@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const EyeMouseContext = createContext(null);
 
 export const EyeMouseProvider = ({ children }) => {
+  const navigate = useNavigate();
   const [isConnected, setIsConnected] = useState(false);
   const [telemetry, setTelemetry] = useState({
     isControlling: false,
@@ -242,28 +244,60 @@ export const EyeMouseProvider = ({ children }) => {
     }
   }, []);
 
-  // Global hotkeys (ESC to Stop, P to Pause)
+  const [isCalibrationOpen, setIsCalibrationOpen] = useState(false);
+
+  const startCalibrationFlow = useCallback(() => {
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => {});
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      } else if (el.msRequestFullscreen) {
+        el.msRequestFullscreen();
+      }
+    } catch (_) {}
+    setIsCalibrationOpen(true);
+  }, []);
+
+  const closeCalibrationFlow = useCallback(() => {
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    } catch (_) {}
+    setIsCalibrationOpen(false);
+  }, []);
+
+  // Global hotkeys (ESC to Stop, P to Pause, C to Calibrate)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        // Do NOT trigger emergency stop if user is on calibration page or in fullscreen calibration
-        if (
-          window.location.pathname.includes('/calibration') ||
-          document.fullscreenElement ||
-          document.webkitFullscreenElement
-        ) {
+        // If calibration overlay is active, let calibration overlay handle ESC
+        if (isCalibrationOpen || document.fullscreenElement || document.webkitFullscreenElement) {
           return;
         }
         stopControl();
       } else if (e.key === 'p' || e.key === 'P') {
-        // Only toggle if not in an active input
+        // Only toggle if not in an active input and not calibrating
         if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+        if (isCalibrationOpen) return;
         pauseControl();
+      } else if (e.key === 'c' || e.key === 'C') {
+        // Only trigger if not in an active input
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+        if (isCalibrationOpen) return;
+
+        startCalibrationFlow();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [stopControl, pauseControl]);
+  }, [stopControl, pauseControl, isCalibrationOpen, startCalibrationFlow]);
 
   return (
     <EyeMouseContext.Provider
@@ -272,6 +306,9 @@ export const EyeMouseProvider = ({ children }) => {
         telemetry,
         settings,
         calibrationResult,
+        isCalibrationOpen,
+        startCalibrationFlow,
+        closeCalibrationFlow,
         startControl,
         pauseControl,
         resumeControl,
